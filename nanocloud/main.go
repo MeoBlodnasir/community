@@ -31,6 +31,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/routes/apps"
 	"github.com/Nanocloud/community/nanocloud/routes/front"
 	"github.com/Nanocloud/community/nanocloud/routes/history"
+	"github.com/Nanocloud/community/nanocloud/routes/iaas"
 	"github.com/Nanocloud/community/nanocloud/routes/me"
 	"github.com/Nanocloud/community/nanocloud/routes/oauth"
 	"github.com/Nanocloud/community/nanocloud/routes/upload"
@@ -40,10 +41,19 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+
+	_ "bitbucket.org/nanocloud/enterprise/nanocloud/drivers/iaas/azure"
+	iaasConn "github.com/Nanocloud/community/nanocloud/iaas"
 )
 
 func main() {
-	err := migration.Migrate()
+	err := iaasConn.Open("azure", nil)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	err = migration.Migrate()
 	if err != nil {
 		log.Error(err)
 		return
@@ -107,6 +117,14 @@ func main() {
 	 */
 	e.Post("/upload", upload.Post)
 	e.Get("/upload", upload.Get)
+
+	/**
+	 * IAAS Azure
+	 */
+	router.Get("/iaas", middlewares.Admin, iaas.ListRunningVM)
+	router.Post("/iaas/:id/stop", middlewares.Admin, iaas.StopVM)
+	router.Post("/iaas/:id/start", middlewares.Admin, iaas.StartVM)
+	router.Post("/iaas/:id/download", middlewares.Admin, iaas.DownloadVM)
 
 	addr := ":" + utils.Env("PORT", "8080")
 	log.Info("Server running at ", addr)
