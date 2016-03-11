@@ -94,7 +94,7 @@ func CopyFile(source string, dest string) (err error) {
 }
 
 func ParseJSONBody(c echo.Context, dst interface{}) error {
-	body, err := ioutil.ReadAll(c.Request().Body)
+	body, err := ioutil.ReadAll(c.Request().Body())
 	if err == nil {
 		err = json.Unmarshal(body, dst)
 	}

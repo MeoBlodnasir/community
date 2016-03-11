@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"net/http"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/labstack/echo/engine"
 )
 
 const (
@@ -27,7 +27,7 @@ type Connector interface {
 	GetClient(key, secret string) (interface{}, error)
 	GetUserFromAccessToken(accessToken string) (interface{}, error)
 	AuthenticateUser(username, password string) (interface{}, error)
-	GetAccessToken(interface{}, interface{}, *http.Request) (interface{}, error)
+	GetAccessToken(interface{}, interface{}, engine.Request) (interface{}, error)
 }
 
 var kConnector Connector
@@ -64,22 +64,18 @@ func (e *OAuthError) ToJSON() (rt []byte, err error) {
 	return
 }
 
-func GetAccessToken(req *http.Request) (accessToken string, err *OAuthError) {
+func GetAccessToken(req engine.Request) (accessToken string, err *OAuthError) {
 	/*
 	 * Check Query String
 	 */
-	query := req.URL.Query()
-	accessTokenQuery, exists := query["access_token"]
-	if exists && len(accessTokenQuery[0]) > 0 {
-		accessToken = accessTokenQuery[0]
-		return
+	accessToken = req.URL().QueryValue("access_token")
+	if len(accessToken) == 0 {
+		/*
+		 * Check Authorization Header
+		 */
+
+		accessToken, err = GetAuthorizationHeaderValue(req, "Bearer")
 	}
-
-	/*
-	 * Check Authorization Header
-	 */
-
-	accessToken, err = GetAuthorizationHeaderValue(req, "Bearer")
 	return
 }
 
@@ -87,7 +83,7 @@ func SetConnector(connector Connector) {
 	kConnector = connector
 }
 
-func GetUser(res http.ResponseWriter, req *http.Request) (interface{}, *OAuthError) {
+func GetUser(res engine.Response, req engine.Request) (interface{}, *OAuthError) {
 	accessToken, err := GetAccessToken(req)
 	if err != nil {
 		return nil, err
@@ -106,8 +102,8 @@ func GetUser(res http.ResponseWriter, req *http.Request) (interface{}, *OAuthErr
 	return nil, &OAuthError{403, ACCESS_DENIED, "Invalid access token"}
 }
 
-func GetAuthorizationHeaderValue(req *http.Request, authType string) (string, *OAuthError) {
-	rawHeader := req.Header.Get("Authorization")
+func GetAuthorizationHeaderValue(req engine.Request, authType string) (string, *OAuthError) {
+	rawHeader := req.Header().Get("Authorization")
 	if len(rawHeader) < 1 {
 		return "", &OAuthError{403, INVALID_REQUEST, "Authorization header is missing"}
 	}
@@ -125,7 +121,7 @@ func GetAuthorizationHeaderValue(req *http.Request, authType string) (string, *O
 	return token, nil
 }
 
-func clientBasicAuth(req *http.Request) (interface{}, *OAuthError) {
+func clientBasicAuth(req engine.Request) (interface{}, *OAuthError) {
 	rawAuthToken, err := GetAuthorizationHeaderValue(req, "Basic")
 	if err != nil {
 		return nil, err
@@ -157,7 +153,7 @@ func clientBasicAuth(req *http.Request) (interface{}, *OAuthError) {
 	return client, nil
 }
 
-func oauthErrorReply(res http.ResponseWriter, oauthErr OAuthError) error {
+func oauthErrorReply(res engine.Response, oauthErr OAuthError) error {
 	res.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	ret, err := oauthErr.ToJSON()
 	if err != nil {
@@ -174,11 +170,11 @@ func isJSON(contentType string) bool {
 	return strings.SplitN(contentType, ";", 2)[0] == "application/json"
 }
 
-func HandleRequest(res http.ResponseWriter, req *http.Request) {
+func HandleRequest(res engine.Response, req engine.Request) {
 	res.Header().Add("Cache-Control", "no-store")
 	res.Header().Add("Pragma", "no-cache")
 
-	if req.Method == "POST" && req.URL.Path == "/oauth/token" {
+	if req.Method() == "POST" && req.URL().Path() == "/oauth/token" {
 
 		client, err := clientBasicAuth(req)
 		if err != nil {
@@ -191,12 +187,12 @@ func HandleRequest(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if !isJSON(req.Header.Get("Content-Type")) {
+		if !isJSON(req.Header().Get("Content-Type")) {
 			oauthErrorReply(res, OAuthError{400, INVALID_REQUEST, "Only JSON body is accepted"})
 			return
 		}
 
-		decoder := json.NewDecoder(req.Body)
+		decoder := json.NewDecoder(req.Body())
 		form := make(map[string]interface{})
 
 		fail := decoder.Decode(&form)
@@ -303,7 +299,7 @@ func (c dummyConnector) AuthenticateUser(username, password string) (interface{}
 	return nil, errors.New("AuthenticateUser is not implemented")
 }
 
-func (c dummyConnector) GetAccessToken(user, client interface{}, req *http.Request) (interface{}, error) {
+func (c dummyConnector) GetAccessToken(user, client interface{}, req engine.Request) (interface{}, error) {
 	return nil, errors.New("GetAccessToken is not implemented")
 }
 

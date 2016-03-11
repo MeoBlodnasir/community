@@ -32,7 +32,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/models/users"
 	"github.com/Nanocloud/community/nanocloud/utils"
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
@@ -43,7 +43,7 @@ type hash map[string]interface{}
 // Does:
 // - Create all connections in DB for a particular user in order to use all applications
 // ========================================================================================================================
-func GetConnections(c *echo.Context) error {
+func GetConnections(c echo.Context) error {
 	userList, err := users.FindUsers()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, hash{
@@ -70,7 +70,7 @@ func GetConnections(c *echo.Context) error {
 	return c.JSON(http.StatusOK, hash{"data": response})
 }
 
-func ListApplications(c *echo.Context) error {
+func ListApplications(c echo.Context) error {
 	applications, err := apps.GetAllApps()
 	if err == apps.GetAppsFailed {
 		return c.JSON(http.StatusInternalServerError, hash{
@@ -100,7 +100,7 @@ func ListApplications(c *echo.Context) error {
 // Does:
 // - Return list of applications available for the current user
 // ========================================================================================================================
-func ListUserApps(c *echo.Context) error {
+func ListUserApps(c echo.Context) error {
 	user := c.Get("user").(*users.User)
 	applications, err := apps.GetUserApps(user.Id)
 	if err == apps.GetAppsFailed {
@@ -126,7 +126,7 @@ func ListUserApps(c *echo.Context) error {
 }
 
 // Make an application unusable
-func UnpublishApplication(c *echo.Context) error {
+func UnpublishApplication(c echo.Context) error {
 	appId := c.Param("app_id")
 	if len(appId) < 1 {
 		return c.JSON(http.StatusBadRequest, hash{
@@ -156,7 +156,7 @@ func UnpublishApplication(c *echo.Context) error {
 	})
 }
 
-func PublishApplication(c *echo.Context) error {
+func PublishApplication(c echo.Context) error {
 	var params struct {
 		Data struct {
 			Attributes struct {
@@ -198,7 +198,7 @@ func PublishApplication(c *echo.Context) error {
 	})
 }
 
-func ChangeAppName(c *echo.Context) error {
+func ChangeAppName(c echo.Context) error {
 	appId := c.Param("app_id")
 	if len(appId) < 1 {
 		return c.JSON(http.StatusBadRequest, hash{

@@ -25,6 +25,8 @@ package upload
 import (
 	"io"
 	"io/ioutil"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
@@ -36,6 +38,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/oauth2"
 	"github.com/Nanocloud/community/nanocloud/utils"
 	log "github.com/Sirupsen/logrus"
+	"github.com/labstack/echo/engine"
 )
 
 var kUploadDir string
@@ -54,10 +57,10 @@ func init() {
 
 // Get checks a chunk.
 // If it doesn't exist then flowjs tries to upload it via Post.
-func Get(w http.ResponseWriter, r *http.Request) {
+func Get(w engine.Response, r engine.Request) {
 	user, oauthErr := oauth2.GetUser(w, r)
 	if user == nil || oauthErr != nil {
-		http.Error(w, "", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -69,37 +72,78 @@ func Get(w http.ResponseWriter, r *http.Request) {
 		r.FormValue("flowChunkNumber"),
 	)
 	if _, err := os.Stat(chunkPath); err != nil {
-		http.Error(w, "chunk not found", http.StatusSeeOther)
+		w.WriteHeader(http.StatusSeeOther)
+		w.Write([]byte("chunk not found"))
 		return
 	}
 }
 
+func getMutipartReader(r engine.Request) (*multipart.Reader, error) {
+	v := r.Header().Get("Content-Type")
+	if v == "" {
+		return nil, http.ErrNotMultipart
+	}
+	d, params, err := mime.ParseMediaType(v)
+	if err != nil || d != "multipart/form-data" {
+		return nil, http.ErrNotMultipart
+	}
+	boundary, ok := params["boundary"]
+	if !ok {
+		return nil, http.ErrMissingBoundary
+	}
+	return multipart.NewReader(r.Body(), boundary), nil
+}
+
 // Post tries to get and save a chunk.
-func Post(w http.ResponseWriter, r *http.Request) {
+func Post(w engine.Response, r engine.Request) {
 	rawuser, oauthErr := oauth2.GetUser(w, r)
 	if rawuser == nil || oauthErr != nil {
-		http.Error(w, "", http.StatusUnauthorized)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	user := rawuser.(*users.User)
 	userPath := filepath.Join(kUploadDir, user.Id)
 
 	// get the multipart data
-	err := r.ParseMultipartForm(2 * 1024 * 1024) // chunkSize
+
+	multipartReader, err := getMutipartReader(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	form, err := multipartReader.ReadForm(2 * 1024 * 1024) // chunkSize
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	values := make(map[string][]string)
+	for k, v := range form.Value {
+		values[k] = append(values[k], v...)
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	chunkNum, err := strconv.Atoi(r.FormValue("flowChunkNumber"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	totalChunks, err := strconv.Atoi(r.FormValue("flowTotalChunks"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -108,7 +152,8 @@ func Post(w http.ResponseWriter, r *http.Request) {
 
 	err = writeChunk(filepath.Join(userPath, "incomplete", filename), strconv.Itoa(chunkNum), r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -122,7 +167,8 @@ func Post(w http.ResponseWriter, r *http.Request) {
 	// now finish the job
 	err = assembleUpload(userPath, filename)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("unable to assemble the uploaded chunks")

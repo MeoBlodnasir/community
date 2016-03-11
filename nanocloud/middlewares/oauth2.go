@@ -26,10 +26,10 @@ import (
 	"errors"
 
 	"github.com/Nanocloud/community/nanocloud/oauth2"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
-func oAuth2(c *echo.Context, handler echo.HandlerFunc) error {
+func oAuth2(c echo.Context, handler echo.HandlerFunc) error {
 	r := c.Request()
 	w := c.Response()
 
@@ -54,7 +54,7 @@ func oAuth2(c *echo.Context, handler echo.HandlerFunc) error {
 }
 
 func OAuth2(handler echo.HandlerFunc) echo.HandlerFunc {
-	return func(c *echo.Context) error {
+	return func(c echo.Context) error {
 		return oAuth2(c, handler)
 	}
 }

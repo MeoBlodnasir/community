@@ -28,7 +28,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/connectors/db"
 	"github.com/Nanocloud/community/nanocloud/utils"
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
@@ -42,7 +42,7 @@ type HistoryInfo struct {
 }
 
 // Get a list of all the log entries of the database
-func List(c *echo.Context) error {
+func List(c echo.Context) error {
 	var histories []HistoryInfo
 	rows, err := db.Query(
 		`SELECT userid, connectionid,
@@ -88,7 +88,7 @@ func List(c *echo.Context) error {
 }
 
 // Add a new log entry to the database
-func Add(c *echo.Context) error {
+func Add(c echo.Context) error {
 	var attr hash
 
 	err := utils.ParseJSONBody(c, &attr)

@@ -26,12 +26,12 @@ import (
 	"net/http"
 
 	"github.com/Nanocloud/community/nanocloud/models/users"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
 
-func admin(c *echo.Context, handler echo.HandlerFunc) error {
+func admin(c echo.Context, handler echo.HandlerFunc) error {
 	user := c.Get("user").(*users.User)
 
 	if !user.IsAdmin {
@@ -43,7 +43,7 @@ func admin(c *echo.Context, handler echo.HandlerFunc) error {
 }
 
 func Admin(handler echo.HandlerFunc) echo.HandlerFunc {
-	return func(c *echo.Context) error {
+	return func(c echo.Context) error {
 		return admin(c, handler)
 	}
 }

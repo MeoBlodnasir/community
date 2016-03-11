@@ -28,12 +28,12 @@ import (
 
 	"github.com/Nanocloud/community/nanocloud/connectors/db"
 	"github.com/Nanocloud/community/nanocloud/models/users"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
 
-func Get(c *echo.Context) error {
+func Get(c echo.Context) error {
 	user := c.Get("user").(*users.User)
 
 	res, err := db.Query(
@@ -67,7 +67,7 @@ func Get(c *echo.Context) error {
 	return c.JSON(http.StatusOK, r)
 }
 
-func Delete(c *echo.Context) error {
+func Delete(c echo.Context) error {
 	tokenId := c.Param("id")
 
 	if len(tokenId) == 4 {

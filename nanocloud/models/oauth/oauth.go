@@ -23,7 +23,6 @@
 package oauth
 
 import (
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -32,6 +31,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/models/users"
 	"github.com/Nanocloud/community/nanocloud/oauth2"
 	"github.com/Nanocloud/community/nanocloud/utils"
+	"github.com/labstack/echo/engine"
 	"github.com/satori/go.uuid"
 )
 
@@ -111,25 +111,22 @@ func removeExpiredTokens() {
 	)
 }
 
-func (c oauthConnector) GetAccessToken(rawUser, rawClient interface{}, req *http.Request) (interface{}, error) {
+func (c oauthConnector) GetAccessToken(rawUser, rawClient interface{}, req engine.Request) (interface{}, error) {
 	removeExpiredTokens()
 
 	user := rawUser.(*users.User)
 	client := rawClient.(*Client)
 
-	ua := req.UserAgent()
+	ua := req.Header().Get("User-Agent")
 
 	// Get IP client address
 	var ip string
 	if os.Getenv("TRUST_PROXY") == "true" {
-		xForwardedFor := req.Header["X-Forwarded-For"]
-		if len(xForwardedFor) > 0 {
-			ip = xForwardedFor[0]
-		}
+		ip = req.Header().Get("X-Forwarded-For")
 	}
 
 	if len(ip) == 0 {
-		addr := req.RemoteAddr
+		addr := req.RemoteAddress()
 		i := strings.LastIndex(addr, ":")
 		ip = addr[0:i]
 	}

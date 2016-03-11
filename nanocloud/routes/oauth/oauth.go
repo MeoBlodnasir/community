@@ -1,8 +1,9 @@
 package oauth
 
 import (
-	"github.com/Nanocloud/community/nanocloud/oauth2"
 	"net/http"
+
+	"github.com/Nanocloud/community/nanocloud/oauth2"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {

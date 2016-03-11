@@ -28,7 +28,7 @@ import (
 	"github.com/Nanocloud/community/nanocloud/connectors/vms"
 	vm "github.com/Nanocloud/community/nanocloud/vms"
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
@@ -51,7 +51,7 @@ func machinetoStruct(rawmachine vm.Machine) jsonMachine {
 	return mach
 }
 
-func retJsonError(c *echo.Context, err error) error {
+func retJsonError(c echo.Context, err error) error {
 	return c.JSON(
 		http.StatusInternalServerError, hash{
 			"errors": [1]hash{
@@ -62,7 +62,7 @@ func retJsonError(c *echo.Context, err error) error {
 		})
 }
 
-func ListRunningVM(c *echo.Context) error {
+func ListRunningVM(c echo.Context) error {
 	machines, err := vms.Machines()
 	if err != nil {
 		return c.JSON(
@@ -109,7 +109,7 @@ func ListRunningVM(c *echo.Context) error {
 	return c.JSON(http.StatusOK, hash{"data": res})
 }
 
-func StopVM(c *echo.Context) error {
+func StopVM(c echo.Context) error {
 	machine, err := vms.Machine(c.Param("id"))
 
 	err = machine.Stop()
@@ -122,7 +122,7 @@ func StopVM(c *echo.Context) error {
 		})
 }
 
-func StartVM(c *echo.Context) error {
+func StartVM(c echo.Context) error {
 	machine, err := vms.Machine(c.Param("id"))
 	if err != nil {
 		return retJsonError(c, err)
@@ -138,7 +138,7 @@ func StartVM(c *echo.Context) error {
 		})
 }
 
-func CreateVM(c *echo.Context) error {
+func CreateVM(c echo.Context) error {
 	//TODO READ BODY TO GET PASSWORD AND TYPE
 	vm, err := vms.Create(c.Param("id"), "", nil)
 	if err != nil {

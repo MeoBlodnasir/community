@@ -25,13 +25,13 @@ package version
 import (
 	"net/http"
 
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 const appversion = "0.4.0"
 
 // get the version of the nanocloud application
-func Get(c *echo.Context) error {
+func Get(c echo.Context) error {
 	info := map[string]string{
 		"version": appversion,
 	}

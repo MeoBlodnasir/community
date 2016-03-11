@@ -26,12 +26,12 @@ import (
 	"net/http"
 
 	"github.com/Nanocloud/community/nanocloud/models/users"
-	"gopkg.in/labstack/echo.v1"
+	"github.com/labstack/echo"
 )
 
 type hash map[string]interface{}
 
-func Get(c *echo.Context) error {
+func Get(c echo.Context) error {
 	user := c.Get("user").(*users.User)
 	return c.JSON(
 		http.StatusOK,
