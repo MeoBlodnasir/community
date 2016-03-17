@@ -272,6 +272,7 @@ func CheckPublishedApps() {
 				}
 			}
 		}
+		panic("OULALALAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 	}
 }
 
